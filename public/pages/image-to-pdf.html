@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Image → PDF — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>🖼️ Image → PDF</h1>
+    <p class="sub">Multiple images select karo — single PDF ban jayega.</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="title">PDF title</label>
+        <input id="title" type="text" placeholder="RDX_Album" />
+      </div>
+      <div class="field">
+        <label for="images">Choose images (max 30, 20MB each)</label>
+        <input id="images" type="file" accept="image/*" multiple required />
+      </div>
+      <div class="thumb-list" id="thumbs"></div>
+      <button class="btn" id="btn" type="submit" style="margin-top:14px">⬇ Convert & Download PDF</button>
+    </form>
+
+    <div class="alert" id="alert"></div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+const alertEl = document.getElementById("alert");
+const thumbs = document.getElementById("thumbs");
+const fileEl = document.getElementById("images");
+
+fileEl.addEventListener("change", () => {
+  thumbs.innerHTML = "";
+  [...fileEl.files].forEach((f) => {
+    const img = document.createElement("img");
+    img.className = "thumb";
+    img.src = URL.createObjectURL(f);
+    thumbs.appendChild(img);
+  });
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  RDX.hideAlert(alertEl);
+  if (!fileEl.files.length) return RDX.showAlert(alertEl, "At least 1 image select karo.");
+  RDX.setLoading(btn, true, "Building PDF...");
+  try {
+    const fd = new FormData();
+    fd.append("title", document.getElementById("title").value || "RDX_Images");
+    [...fileEl.files].forEach((f) => fd.append("images", f));
+    const data = await RDX.postBlob("/api/image-to-pdf", fd, false);
+    RDX.saveBlob(data);
+    RDX.showAlert(alertEl, "PDF ready.", "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(btn, false);
+  }
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

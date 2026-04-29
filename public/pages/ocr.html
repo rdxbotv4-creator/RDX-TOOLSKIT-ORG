@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Image → Text (OCR) — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>🔍 Image → Text (OCR)</h1>
+    <p class="sub">Image URL ya local file dein — text extract ho jayega.</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="imageUrl">Image URL (optional)</label>
+        <input id="imageUrl" type="url" placeholder="https://example.com/image.jpg" />
+      </div>
+      <div class="field">
+        <label for="image">Or upload an image</label>
+        <input id="image" type="file" accept="image/*" />
+      </div>
+      <button class="btn" id="btn" type="submit">⚡ Extract Text</button>
+    </form>
+
+    <img id="prev" class="preview-img" style="display:none" />
+
+    <div class="alert" id="alert"></div>
+
+    <div class="result" id="result">
+      <h3>Extracted Text</h3>
+      <div class="text-out" id="out"></div>
+      <button class="btn secondary" id="copy" type="button" style="margin-top:12px">📋 Copy Text</button>
+    </div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+const alertEl = document.getElementById("alert");
+const result = document.getElementById("result");
+const out = document.getElementById("out");
+const prev = document.getElementById("prev");
+const imgEl = document.getElementById("image");
+const urlEl = document.getElementById("imageUrl");
+
+imgEl.addEventListener("change", () => {
+  if (imgEl.files[0]) {
+    prev.src = URL.createObjectURL(imgEl.files[0]);
+    prev.style.display = "block";
+  }
+});
+urlEl.addEventListener("input", () => {
+  if (urlEl.value) { prev.src = urlEl.value; prev.style.display = "block"; }
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  RDX.hideAlert(alertEl);
+  result.classList.remove("show");
+
+  if (!urlEl.value && !imgEl.files[0])
+    return RDX.showAlert(alertEl, "URL ya file mein se kuch ek dein.");
+
+  RDX.setLoading(btn, true, "Extracting...");
+  try {
+    let j;
+    if (imgEl.files[0]) {
+      const fd = new FormData();
+      fd.append("image", imgEl.files[0]);
+      j = await RDX.post("/api/ocr", fd, false);
+    } else {
+      j = await RDX.post("/api/ocr", { imageUrl: urlEl.value.trim() });
+    }
+    out.textContent = j.text || "(empty)";
+    result.classList.add("show");
+    RDX.showAlert(alertEl, "Done.", "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(btn, false);
+  }
+});
+
+document.getElementById("copy").addEventListener("click", () => {
+  navigator.clipboard.writeText(out.textContent || "");
+  RDX.showAlert(alertEl, "Copied to clipboard.", "ok");
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

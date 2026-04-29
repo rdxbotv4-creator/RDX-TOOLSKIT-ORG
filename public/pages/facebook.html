@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Facebook Downloader — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>📘 Facebook Downloader</h1>
+    <p class="sub">Reels aur Facebook videos — FHD, HD, SD, aur audio quality select karo.</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="url">Facebook URL</label>
+        <input id="url" type="url" required
+          placeholder="https://www.facebook.com/reel/684552273643654" />
+      </div>
+      <button class="btn" id="btn" type="submit">⚡ Fetch Media</button>
+    </form>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="result" id="result">
+      <h3>Result</h3>
+      <div id="info"></div>
+      <div class="media-grid" id="grid" style="margin-top:14px"></div>
+    </div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+const alertEl = document.getElementById("alert");
+const result = document.getElementById("result");
+const grid = document.getElementById("grid");
+const info = document.getElementById("info");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  RDX.hideAlert(alertEl);
+  result.classList.remove("show");
+  grid.innerHTML = ""; info.innerHTML = "";
+  RDX.setLoading(btn, true, "Fetching...");
+
+  try {
+    const j = await RDX.post("/api/facebook", { url: document.getElementById("url").value.trim() });
+    const r = j.result;
+
+    info.innerHTML = `
+      <div class="video-frame">
+        ${r.thumbnail ? `<img src="${r.thumbnail}" referrerpolicy="no-referrer" />` : ""}
+        <div class="info">
+          <b>${r.title || "Facebook Media"}</b><br/>
+          ${(r.description || "").replace(/</g,"&lt;")}<br/>
+          ${r.mediaStats ? `<small>👍 ${r.mediaStats.likesCount || 0} · 💬 ${r.mediaStats.commentsCount || 0}</small>` : ""}
+        </div>
+      </div>
+    `;
+
+    if (!r.media?.length) throw new Error("Koi downloadable media nahi mila.");
+    r.media.forEach((m) => {
+      const div = document.createElement("div");
+      div.className = "media-item";
+      div.innerHTML = `
+        ${m.thumbnail ? `<img src="${m.thumbnail}" referrerpolicy="no-referrer" />` : `<div style="aspect-ratio:4/5;display:grid;place-items:center;background:#000;font-size:38px">${m.type === "Audio" ? "🎧" : "🎬"}</div>`}
+        <div class="meta">
+          <b>${m.type} · ${m.quality || ""}</b><br/>
+          ${m.resolution || ""} · ${m.extension || ""}<br/>
+          ${m.fileSize || ""}
+        </div>
+        <a class="dl" href="${m.url}" target="_blank" rel="noopener">⬇ Download</a>
+      `;
+      grid.appendChild(div);
+    });
+
+    result.classList.add("show");
+    RDX.showAlert(alertEl, `${r.media.length} option(s) ready.`, "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(btn, false);
+  }
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

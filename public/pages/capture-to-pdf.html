@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Live Capture → PDF — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>📷 Live Camera Capture → PDF</h1>
+    <p class="sub">Camera access do, multiple photos click karo, aur ek hi PDF download karo.</p>
+
+    <video class="cam" id="cam" autoplay playsinline></video>
+    <canvas class="snap" id="snap"></canvas>
+
+    <div class="row" style="margin-top:14px">
+      <button class="btn secondary" id="start" type="button">🎬 Start Camera</button>
+      <button class="btn" id="snapBtn" type="button" disabled>📸 Capture</button>
+      <button class="btn secondary" id="clear" type="button">🗑 Clear</button>
+    </div>
+
+    <div class="thumb-list" id="thumbs" style="margin-top:14px"></div>
+
+    <div class="field" style="margin-top:18px">
+      <label for="title">PDF title</label>
+      <input id="title" type="text" placeholder="RDX_Capture" />
+    </div>
+
+    <button class="btn" id="dl" type="button" disabled>⬇ Build & Download PDF</button>
+
+    <div class="alert" id="alert"></div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const cam = document.getElementById("cam");
+const snap = document.getElementById("snap");
+const startBtn = document.getElementById("start");
+const snapBtn = document.getElementById("snapBtn");
+const clearBtn = document.getElementById("clear");
+const dlBtn = document.getElementById("dl");
+const thumbs = document.getElementById("thumbs");
+const alertEl = document.getElementById("alert");
+
+let stream = null;
+const shots = [];
+
+startBtn.addEventListener("click", async () => {
+  RDX.hideAlert(alertEl);
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } },
+      audio: false,
+    });
+    cam.srcObject = stream;
+    snapBtn.disabled = false;
+    startBtn.textContent = "🟢 Camera On";
+  } catch (e) {
+    RDX.showAlert(alertEl, "Camera access denied: " + e.message);
+  }
+});
+
+snapBtn.addEventListener("click", () => {
+  if (!stream) return;
+  const w = cam.videoWidth, h = cam.videoHeight;
+  if (!w || !h) return;
+  snap.width = w; snap.height = h;
+  snap.getContext("2d").drawImage(cam, 0, 0, w, h);
+  const url = snap.toDataURL("image/jpeg", 0.92);
+  shots.push(url);
+  const img = document.createElement("img");
+  img.className = "thumb";
+  img.src = url;
+  thumbs.appendChild(img);
+  dlBtn.disabled = false;
+});
+
+clearBtn.addEventListener("click", () => {
+  shots.length = 0;
+  thumbs.innerHTML = "";
+  dlBtn.disabled = true;
+});
+
+dlBtn.addEventListener("click", async () => {
+  if (!shots.length) return;
+  RDX.hideAlert(alertEl);
+  RDX.setLoading(dlBtn, true, "Building PDF...");
+  try {
+    const fd = new FormData();
+    fd.append("title", document.getElementById("title").value || "RDX_Capture");
+    fd.append("dataUrls", JSON.stringify(shots));
+    const data = await RDX.postBlob("/api/image-to-pdf", fd, false);
+    RDX.saveBlob(data);
+    RDX.showAlert(alertEl, "PDF ready.", "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(dlBtn, false);
+  }
+});
+
+window.addEventListener("beforeunload", () => {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

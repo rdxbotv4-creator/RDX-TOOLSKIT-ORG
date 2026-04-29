@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Text → PDF / Word / Excel / TXT — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>📝 Text → PDF / Word / Excel / TXT</h1>
+    <p class="sub">Apna text paste karo aur kisi bhi format mein download karo.</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="title">Document title</label>
+        <input id="title" type="text" placeholder="My RDX Document" />
+      </div>
+
+      <div class="field">
+        <label for="text">Content</label>
+        <textarea id="text" required placeholder="Yahan apna text paste karo..."></textarea>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="format">Format</label>
+          <select id="format">
+            <option value="pdf">PDF (.pdf)</option>
+            <option value="docx">Word (.docx)</option>
+            <option value="xlsx">Excel (.xlsx)</option>
+            <option value="txt">Plain Text (.txt)</option>
+          </select>
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <button class="btn" id="btn" type="submit" style="width:100%">⬇ Generate & Download</button>
+        </div>
+      </div>
+    </form>
+
+    <div class="alert" id="alert"></div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+const alertEl = document.getElementById("alert");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  RDX.hideAlert(alertEl);
+  RDX.setLoading(btn, true, "Generating...");
+  try {
+    const data = await RDX.postBlob("/api/text-convert", {
+      text: document.getElementById("text").value,
+      format: document.getElementById("format").value,
+      title: document.getElementById("title").value || "RDX_Document",
+    });
+    RDX.saveBlob(data);
+    RDX.showAlert(alertEl, "Done — file downloaded.", "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(btn, false);
+  }
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

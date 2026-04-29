@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Instagram Downloader — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>📸 Instagram Downloader</h1>
+    <p class="sub">Reel, post ya carousel ka link paste karo — saari media options mil jayengi.</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="url">Instagram URL</label>
+        <input id="url" name="url" type="url" required
+          placeholder="https://www.instagram.com/p/Xxxxxxxx/" />
+      </div>
+      <button class="btn" id="btn" type="submit">⚡ Fetch Media</button>
+    </form>
+
+    <div class="alert" id="alert"></div>
+
+    <div class="result" id="result">
+      <h3>Available Media</h3>
+      <div class="media-grid" id="grid"></div>
+    </div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+const alertEl = document.getElementById("alert");
+const result = document.getElementById("result");
+const grid = document.getElementById("grid");
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  RDX.hideAlert(alertEl);
+  result.classList.remove("show");
+  grid.innerHTML = "";
+  RDX.setLoading(btn, true, "Fetching...");
+
+  try {
+    const j = await RDX.post("/api/instagram", { url: document.getElementById("url").value.trim() });
+    if (!j.items.length) throw new Error("Koi media nahi mila is link par.");
+
+    j.items.forEach((it, i) => {
+      const card = document.createElement("div");
+      card.className = "media-item";
+      card.innerHTML = `
+        <img src="${it.thumbnail}" alt="thumb ${i+1}" referrerpolicy="no-referrer" />
+        <div class="meta">Media #${i+1}</div>
+        <a class="dl" href="${it.url}" target="_blank" rel="noopener">⬇ Download</a>
+      `;
+      grid.appendChild(card);
+    });
+
+    result.classList.add("show");
+    RDX.showAlert(alertEl, `${j.count} item(s) ready.`, "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(btn, false);
+  }
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

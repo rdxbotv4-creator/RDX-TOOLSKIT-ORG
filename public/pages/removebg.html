@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Background Remover — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<main class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>✂️ Background Remover</h1>
+    <p class="sub">Image URL dein — background remove ho ke transparent PNG mil jayega.</p>
+
+    <form id="form">
+      <div class="field">
+        <label for="imageUrl">Image URL</label>
+        <input id="imageUrl" type="url" required placeholder="https://example.com/photo.jpg" />
+      </div>
+      <button class="btn" id="btn" type="submit">⚡ Remove Background</button>
+    </form>
+
+    <img id="prev" class="preview-img" style="display:none" />
+
+    <div class="alert" id="alert"></div>
+
+    <div class="result" id="result">
+      <h3>Result</h3>
+      <img id="out" class="preview-img" />
+      <a id="dl" class="btn" style="margin-top:14px;display:inline-flex" target="_blank" rel="noopener">⬇ Open / Save PNG</a>
+    </div>
+  </div>
+</main>
+
+<footer>© RDX Tools — Sardar RDX</footer>
+
+<script src="/js/main.js"></script>
+<script>
+const form = document.getElementById("form");
+const btn = document.getElementById("btn");
+const alertEl = document.getElementById("alert");
+const result = document.getElementById("result");
+const out = document.getElementById("out");
+const dl = document.getElementById("dl");
+const prev = document.getElementById("prev");
+const urlEl = document.getElementById("imageUrl");
+
+urlEl.addEventListener("input", () => {
+  if (urlEl.value) { prev.src = urlEl.value; prev.style.display = "block"; }
+});
+
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  RDX.hideAlert(alertEl);
+  result.classList.remove("show");
+  RDX.setLoading(btn, true, "Working magic...");
+  try {
+    const j = await RDX.post("/api/removebg", { imageUrl: urlEl.value.trim() });
+    out.src = j.url;
+    dl.href = j.url;
+    result.classList.add("show");
+    RDX.showAlert(alertEl, "Done.", "ok");
+  } catch (err) {
+    RDX.showAlert(alertEl, err.message);
+  } finally {
+    RDX.setLoading(btn, false);
+  }
+});
+</script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+</body>
+</html>

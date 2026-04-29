@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>FB Token Generator — RDX Tools</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/css/style.css" />
+<style>
+  /* tab switcher */
+  .tabs {
+    display: flex; gap: 6px;
+    background: rgba(4, 4, 14, 0.6);
+    border: 1px solid rgba(124, 77, 255, 0.28);
+    border-radius: 14px; padding: 6px; margin-bottom: 22px;
+    width: fit-content;
+  }
+  .tabs button {
+    background: transparent; border: 0;
+    padding: 10px 22px; border-radius: 10px;
+    color: var(--muted); font-weight: 700; font-size: 13px;
+    letter-spacing: 1.2px; cursor: pointer;
+    transition: color .25s, background .25s, box-shadow .25s;
+  }
+  .tabs button.active {
+    color: #fff;
+    background: linear-gradient(135deg, var(--neon-1), var(--neon-3));
+    box-shadow: 0 0 22px rgba(124, 77, 255, 0.45);
+  }
+  .pane { display: none; }
+  .pane.active { display: block; animation: fadeUp .4s ease; }
+
+  /* app picker tiles */
+  .app-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px; margin-top: 8px;
+  }
+  .app-tile {
+    position: relative;
+    padding: 16px 12px; border-radius: 14px; cursor: pointer;
+    background: rgba(4, 4, 14, 0.7);
+    border: 1px solid rgba(124, 77, 255, 0.28);
+    text-align: center;
+    transition: transform .25s, border-color .25s, box-shadow .25s;
+  }
+  .app-tile input { position: absolute; opacity: 0; pointer-events: none; }
+  .app-tile .ic { font-size: 22px; margin-bottom: 6px; }
+  .app-tile .nm { font-size: 13px; font-weight: 700; color: #fff; }
+  .app-tile .pf {
+    font-size: 10px; color: var(--muted); letter-spacing: 1.5px;
+    margin-top: 4px; font-family: ui-monospace, monospace;
+  }
+  .app-tile:hover { transform: translateY(-3px); border-color: var(--neon-2); }
+  .app-tile.sel {
+    border-color: transparent;
+    background:
+      linear-gradient(rgba(4, 4, 14, 0.8), rgba(4, 4, 14, 0.8)) padding-box,
+      linear-gradient(135deg, var(--neon-1), var(--neon-2), var(--neon-3)) border-box;
+    border: 1.5px solid transparent;
+    box-shadow: 0 0 24px rgba(124, 77, 255, 0.45);
+  }
+  .app-tile.sel .ic { color: var(--neon-2); text-shadow: 0 0 12px var(--neon-2); }
+
+  /* result item */
+  .tok-item {
+    margin-top: 14px; padding: 16px; border-radius: 14px;
+    background: rgba(4, 4, 14, 0.7);
+    border: 1px solid rgba(124, 77, 255, 0.3);
+  }
+  .tok-item.ok    { border-color: rgba(54, 255, 176, 0.45); }
+  .tok-item.err   { border-color: rgba(255, 77, 109, 0.45); }
+  .tok-item .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .tok-item .head b { color: #fff; }
+  .tok-item .pill {
+    padding: 4px 10px; border-radius: 999px; font-size: 10px; font-weight: 800;
+    letter-spacing: 1.5px; text-transform: uppercase;
+  }
+  .tok-item.ok  .pill { background: rgba(54, 255, 176, 0.12); color: var(--neon-4); }
+  .tok-item.err .pill { background: rgba(255, 77, 109, 0.12); color: #ffb3c1; }
+  .tok-item .row-kv {
+    display: flex; gap: 8px; align-items: flex-start; margin: 6px 0;
+    font-size: 12px;
+  }
+  .tok-item .k { color: var(--muted); min-width: 60px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; padding-top: 6px; }
+  .tok-item .v {
+    flex: 1; background: rgba(0,0,0,0.45); padding: 6px 10px; border-radius: 8px;
+    font-family: ui-monospace, monospace; font-size: 12px; color: #d8e0ff;
+    word-break: break-all; max-height: 90px; overflow: auto;
+  }
+  .tok-item .copy {
+    background: rgba(124, 77, 255, 0.15); border: 1px solid rgba(124, 77, 255, 0.4);
+    color: #cfd6ff; border-radius: 8px; padding: 6px 10px; cursor: pointer;
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    transition: background .2s, color .2s;
+  }
+  .copy:hover { background: var(--neon-1); color: #fff; }
+
+  .pw-wrap { position: relative; }
+  .pw-wrap .pw-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: transparent; border: 0; color: var(--muted); cursor: pointer;
+    font-size: 13px; font-weight: 700; letter-spacing: 1px;
+  }
+  .pw-wrap .pw-toggle:hover { color: var(--neon-2); }
+
+  .warn {
+    margin-bottom: 16px; padding: 12px 16px;
+    border-radius: 12px; font-size: 13px;
+    background: rgba(255, 179, 71, 0.08);
+    border: 1px solid rgba(255, 179, 71, 0.35);
+    color: #ffd9a8;
+  }
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<div class="vignette"></div>
+<div class="scanline"></div>
+
+<nav class="navbar">
+  <a href="/" class="brand"><div class="logo"><i class="fas fa-bolt"></i></div><span class="name">RDX TOOLS</span></a>
+</nav>
+
+<div class="tool-wrap">
+  <a href="/" class="back-link">← Back to Tools</a>
+
+  <div class="panel">
+    <h1>🔑 FB Token Generator</h1>
+    <p class="sub">Email + password sa Facebook access token nikalein. Single ya multiple accounts dono support hain.</p>
+
+    <div class="warn">
+      <b>⚠️ Note:</b> Apne hi accounts par istemal karein. Credentials ko surakshit rakhein —
+      hum kuch save nahi karte, sab kuch realtime process hota hai.
+    </div>
+
+    <div class="tabs">
+      <button class="active" data-tab="single">SINGLE</button>
+      <button data-tab="multi">MULTI</button>
+    </div>
+
+    <!-- SINGLE -->
+    <div class="pane active" id="pane-single">
+      <div class="field">
+        <label>Email / Phone</label>
+        <input id="email" type="text" placeholder="user@example.com or 03xxxxxxxxx" autocomplete="off" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <div class="pw-wrap">
+          <input id="password" type="password" placeholder="••••••••" autocomplete="off" />
+          <button type="button" class="pw-toggle" id="pwToggle">SHOW</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>2FA Code or Auth Key <span style="color:var(--muted);font-size:10px;">(optional)</span></label>
+        <input id="auth" type="text" placeholder="123456 or BASE32 secret" autocomplete="off" />
+      </div>
+
+      <div class="field">
+        <label>App Type</label>
+        <div class="app-grid" id="appGridSingle"></div>
+      </div>
+
+      <button class="btn" id="btnSingle">🔑 Generate Token</button>
+    </div>
+
+    <!-- MULTI -->
+    <div class="pane" id="pane-multi">
+      <div class="field">
+        <label>Accounts list — <span style="text-transform:none;color:var(--muted);">format: <code>email|password|auth_key</code> (one per line)</span></label>
+        <textarea id="accounts" placeholder="user1@example.com|pass1|
+user2@example.com|pass2|
+user3@example.com|pass3|JBSWY3DPEHPK3PXP"></textarea>
+      </div>
+
+      <div class="field">
+        <label>App Type</label>
+        <div class="app-grid" id="appGridMulti"></div>
+      </div>
+
+      <button class="btn" id="btnMulti">⚡ Generate All Tokens</button>
+    </div>
+
+    <div class="alert" id="alert"></div>
+    <div class="result" id="out">
+      <h3>Output Console</h3>
+      <div id="outBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/main.js"></script>
+<script src="/js/matrix.js"></script>
+<script src="/js/effects.js"></script>
+<script>
+const APPS = [
+  { id: "350685531728|62f8ce9f74b12f84c123cc23437a4a32", name: "FB Android", prefix: "EAAAAU", icon: "🤖" },
+  { id: "6628568379|c1e620fa708a1d5696fb991c1bde5662",   name: "FB iPhone",  prefix: "EAAAAAY", icon: "🍎", default: true },
+  { id: "275254692598279|585aec5b4c27376758abb7ffcb9db2af", name: "FB Lite", prefix: "EAAD6V7", icon: "✈️" },
+  { id: "256002347743983|374e60f8b9bb6b8cbb30f78030438895", name: "Messenger", prefix: "EAADO1", icon: "💬" },
+  { id: "438142079694454|fc0a7caa49b192f64f6f5a6d9643bb28", name: "Ads Manager", prefix: "EAAGO", icon: "📢" },
+  { id: "200424423651082|2a9918c6bcd75b94cefcbb5635c6ad16", name: "Msngr Lite", prefix: "EAAC2S", icon: "💭" },
+];
+
+function buildAppGrid(host, group) {
+  host.innerHTML = APPS.map((a, i) => `
+    <label class="app-tile ${a.default ? "sel" : ""}" data-id="${a.id}">
+      <input type="radio" name="${group}" value="${a.id}" ${a.default ? "checked" : ""}>
+      <div class="ic">${a.icon}</div>
+      <div class="nm">${a.name}</div>
+      <div class="pf">${a.prefix}</div>
+    </label>
+  `).join("");
+  host.querySelectorAll(".app-tile").forEach(t => {
+    t.addEventListener("click", () => {
+      host.querySelectorAll(".app-tile").forEach(x => x.classList.remove("sel"));
+      t.classList.add("sel");
+      t.querySelector("input").checked = true;
+    });
+  });
+}
+buildAppGrid(document.getElementById("appGridSingle"), "appSingle");
+buildAppGrid(document.getElementById("appGridMulti"),  "appMulti");
+
+/* tabs */
+document.querySelectorAll(".tabs button").forEach(b => {
+  b.addEventListener("click", () => {
+    document.querySelectorAll(".tabs button").forEach(x => x.classList.remove("active"));
+    b.classList.add("active");
+    document.querySelectorAll(".pane").forEach(p => p.classList.remove("active"));
+    document.getElementById("pane-" + b.dataset.tab).classList.add("active");
+  });
+});
+
+/* password toggle */
+document.getElementById("pwToggle").addEventListener("click", () => {
+  const i = document.getElementById("password");
+  const t = document.getElementById("pwToggle");
+  if (i.type === "password") { i.type = "text"; t.textContent = "HIDE"; }
+  else { i.type = "password"; t.textContent = "SHOW"; }
+});
+
+/* helpers */
+const alertEl = document.getElementById("alert");
+const outEl   = document.getElementById("out");
+const outBody = document.getElementById("outBody");
+
+function showError(msg) {
+  alertEl.className = "alert error show";
+  alertEl.textContent = "❌ " + msg;
+  outEl.classList.remove("show");
+}
+function clearMsg() { alertEl.className = "alert"; outEl.classList.remove("show"); }
+
+function copyText(t) {
+  navigator.clipboard?.writeText(t).then(() => {
+    const e = document.createElement("div");
+    e.textContent = "✓ Copied to clipboard";
+    e.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:rgba(54,255,176,0.15);border:1px solid #36ffb0;color:#b9ffe3;padding:10px 18px;border-radius:10px;font-weight:700;font-size:13px;z-index:9999;letter-spacing:1px;";
+    document.body.appendChild(e);
+    setTimeout(() => e.remove(), 1600);
+  });
+}
+window.copyText = copyText;
+
+function tokenItem({ email, status, uid, token, cookies, message }) {
+  if (status === "success") {
+    return `
+      <div class="tok-item ok">
+        <div class="head"><b>${email || "Account"}</b><span class="pill">SUCCESS</span></div>
+        ${uid ? `<div class="row-kv"><div class="k">UID</div><div class="v">${uid}</div><button class="copy" onclick="copyText('${uid}')">COPY</button></div>` : ""}
+        <div class="row-kv"><div class="k">Token</div><div class="v">${token}</div><button class="copy" onclick='copyText(${JSON.stringify(token)})'>COPY</button></div>
+        <div class="row-kv"><div class="k">Cookies</div><div class="v">${cookies}</div><button class="copy" onclick='copyText(${JSON.stringify(cookies)})'>COPY</button></div>
+      </div>`;
+  }
+  if (status === "2fa_required") {
+    return `<div class="tok-item err"><div class="head"><b>${email || "Account"}</b><span class="pill">2FA REQUIRED</span></div><div style="font-size:13px;color:#ffb3c1;">${message || "2FA verification required"}</div></div>`;
+  }
+  return `<div class="tok-item err"><div class="head"><b>${email || "Account"}</b><span class="pill">ERROR</span></div><div style="font-size:13px;color:#ffb3c1;">${message || "Failed"}</div></div>`;
+}
+
+/* SINGLE */
+document.getElementById("btnSingle").addEventListener("click", async () => {
+  clearMsg();
+  const email = document.getElementById("email").value.trim();
+  const password = document.getElementById("password").value;
+  const auth = document.getElementById("auth").value.trim();
+  const app_id = document.querySelector('input[name=appSingle]:checked')?.value || "";
+
+  if (!email || !password) return showError("Email aur password zaroori hain");
+  if (!app_id) return showError("App type select karein");
+
+  const btn = document.getElementById("btnSingle");
+  RDX.setLoading(btn, true, "🔑 Generate Token");
+  try {
+    const r = await RDX.post("/api/token/generate", { email, password, auth, app_id });
+    if (r.status === "success") {
+      outBody.innerHTML = tokenItem({ email, ...r });
+      outEl.classList.add("show");
+      outEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (r.status === "2fa_required") {
+      const code = prompt("2FA code daalein (6 digits):");
+      if (code) {
+        const r2 = await RDX.post("/api/token/generate", { email, password, auth, app_id, twofactor_code: code });
+        if (r2.status === "success") {
+          outBody.innerHTML = tokenItem({ email, ...r2 });
+          outEl.classList.add("show");
+        } else showError(r2.message || "2FA failed");
+      } else showError("2FA cancelled");
+    } else {
+      showError(r.message || "Login failed");
+    }
+  } catch (e) {
+    showError(e.message || "Request failed");
+  } finally {
+    RDX.setLoading(btn, false, "🔑 Generate Token");
+  }
+});
+
+/* MULTI */
+document.getElementById("btnMulti").addEventListener("click", async () => {
+  clearMsg();
+  const accounts = document.getElementById("accounts").value.trim();
+  const app_id = document.querySelector('input[name=appMulti]:checked')?.value || "";
+  if (!accounts) return showError("Accounts list daalein");
+  if (!app_id) return showError("App type select karein");
+
+  const btn = document.getElementById("btnMulti");
+  RDX.setLoading(btn, true, "⚡ Generate All Tokens");
+  try {
+    const r = await RDX.post("/api/token/generate-multiple", { accounts, app_id });
+    if (r.status === "success" && Array.isArray(r.results)) {
+      const ok = r.results.filter(x => x.status === "success").length;
+      outBody.innerHTML =
+        `<div style="margin-bottom:14px;font-size:13px;color:var(--muted);letter-spacing:1px;"><b style="color:var(--neon-4);">${ok}</b> / ${r.results.length} successful</div>` +
+        r.results.map(tokenItem).join("");
+      outEl.classList.add("show");
+      outEl.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      showError(r.message || "Bulk failed");
+    }
+  } catch (e) {
+    showError(e.message || "Request failed");
+  } finally {
+    RDX.setLoading(btn, false, "⚡ Generate All Tokens");
+  }
+});
+</script>
+</body>
+</html>
