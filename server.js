@@ -73,6 +73,10 @@ function startTokenService() {
     env: { ...process.env, TOKEN_PORT, PYTHONUNBUFFERED: "1" },
     stdio: ["ignore", "pipe", "pipe"],
   });
+  pyProc.on("error", (err) => {
+    console.log("Python not found - token service disabled");
+    pyProc = null;
+  });
   pyProc.stdout.on("data", (d) => process.stdout.write(`[token] ${d}`));
   pyProc.stderr.on("data", (d) => process.stderr.write(`[token] ${d}`));
   pyProc.on("exit", (code, sig) => {
@@ -89,7 +93,11 @@ function shutdown() {
 }
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
-startTokenService();
+try {
+  startTokenService();
+} catch (e) {
+  console.log("Token service not available - running without it");
+}
 
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`RDX Tools running on http://0.0.0.0:${PORT}`);
